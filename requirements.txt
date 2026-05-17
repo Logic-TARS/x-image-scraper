@@ -1,2 +1,7 @@
 requests>=2.31.0
+tqdm>=4.66.0
+rich>=13.0.0         # 用于彩色终端输出和进度条
+questionary>=2.0.0   # 用于交互式向导
+tomli>=2.0.1         # 用于配置解析 (Python < 3.11)
+streamlit>=1.30.0    # 用于 Web UI
 playwright>=1.40.0   # 可选，仅浏览器自动化模式需要
