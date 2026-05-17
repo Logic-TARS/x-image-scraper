@@ -1,171 +1,168 @@
-# 🐦 X (Twitter) 图片自动爬取工具
+# XScrape
 
-自动批量下载 X (原 Twitter) 用户的媒体图片，支持三种爬取模式。
+批量下载 X/Twitter 用户媒体图片，支持 **官方 API**、**Nitter**、**Playwright** 三种采集模式。
 
----
-
-## 📁 项目结构
-
-```
-x-image-scraper/
-├── src/
-│   ├── scraper.py            # 主爬取模块（API + Nitter 模式）
-│   └── playwright_scraper.py # 浏览器自动化模式
-├── output/                   # 下载图片输出目录
-├── logs/                     # 运行日志
-├── requirements.txt
-└── README.md
-```
-
----
-
-## 🚀 三种爬取模式
-
-### 模式 1：官方 API 模式（推荐，稳定）
-
-需要 Twitter Developer Account 申请 **Bearer Token**。
+## 安装
 
 ```bash
-python src/scraper.py elonmusk \
-  --bearer-token YOUR_BEARER_TOKEN \
-  --count 500 \
-  --output output
-```
+# 基础安装（requests）
+pip install -e .
 
-**获取 Bearer Token：**
-1. 访问 https://developer.twitter.com/en/portal/dashboard
-2. 创建项目 → 获取 Bearer Token（免费版每月 500,000 条推文读取）
-
----
-
-### 模式 2：Nitter 免 API 模式（无需注册）
-
-通过 Nitter（X 的开源镜像前端）爬取，**无需任何 API Key**。
-
-```bash
-python src/scraper.py elonmusk \
-  --nitter https://nitter.privacydev.net \
-  --pages 10 \
-  --output output
-```
-
-**可用 Nitter 实例（任选其一）：**
-- https://nitter.privacydev.net
-- https://nitter.poast.org
-- https://nitter.1d4.us
-- https://nitter.net
-
-> ⚠️ Nitter 实例可能不稳定，若失败请更换实例
-
----
-
-### 模式 3：Playwright 浏览器自动化（最强，绕过反爬）
-
-模拟真实浏览器操作，自动滚动页面抓取图片链接。
-
-```bash
-# 安装 Playwright
-pip install playwright
+# 如需 Playwright 浏览器模式
+pip install -e .[browser]
 playwright install chromium
 
-# 运行（无头模式）
-python src/playwright_scraper.py elonmusk --scrolls 30 --output output
-
-# 可视化运行（显示浏览器窗口，便于调试）
-python src/playwright_scraper.py elonmusk --show-browser
-```
-
----
-
-## ⚙️ 安装
-
-```bash
-# 克隆项目
-git clone <repo-url>
-cd x-image-scraper
-
-# 安装依赖
+# 或用 requirements.txt
 pip install -r requirements.txt
-
-# （可选）安装 Playwright 浏览器驱动
-playwright install chromium
 ```
 
----
+## 快速开始
 
-## 📋 参数说明
+```bash
+# Nitter 模式（无需 API Key）
+xscrape elonmusk --nitter https://nitter.privacydev.net --pages 10
 
-### scraper.py 参数
+# Playwright 浏览器模式
+xscrape-browser elonmusk --scrolls 30
+
+# 第一次使用 X 网页搜索：打开浏览器，手动登录后保存 cookies
+xscrape-login --cookies x_cookies.json --timeout 180 --channel msedge
+
+# 之后可后台使用已登录 cookies 搜索，按点赞数选前 10 个媒体，再按时间下载
+xscrape-x-search ^
+  --cookies x_cookies.json ^
+  --query "(Blue Archive OR ブルアカ OR 블루아카) filter:images min_faves:1000 -filter:retweets" ^
+  --name bluearchive_x_recent_top10 ^
+  --top 10 ^
+  --download-order time ^
+  --scrolls 30 ^
+  --quality-mode
+
+# 官方 API 模式（需 Bearer Token）
+xscrape elonmusk --bearer-token YOUR_TOKEN --count 500
+
+# 官方 API 最近搜索：按点赞数选前 10 个媒体，再按时间从新到旧下载
+xscrape --bearer-token YOUR_TOKEN ^
+  --search-query "(Blue Archive OR ブルアカ OR 블루아카) has:images -is:retweet" ^
+  --search-name bluearchive_recent_top10 ^
+  --count 100 ^
+  --top 10 ^
+  --download-order time
+```
+
+## 三种模式对比
+
+| 模式 | 命令 | 依赖 | 需 API Key | 稳定性 |
+|------|------|------|-----------|--------|
+| 官方 API | `xscrape --bearer-token` | `requests` | 是 | 高 |
+| Nitter | `xscrape --nitter` | `requests` | 否 | 中（依赖实例） |
+| Playwright | `xscrape-browser` | `playwright` | 否 | 中（可能触发风控） |
+
+## 参数说明
+
+### `xscrape`（API / Nitter 模式）
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| `username` | 必填 | 目标用户名（不含 @） |
-| `-o / --output` | `output` | 图片保存目录 |
-| `-n / --count` | `200` | 最多爬取推文数（API模式） |
-| `-w / --workers` | `4` | 并发下载线程数 |
-| `--bearer-token` | 无 | Twitter Bearer Token |
+| `username` | 必填 | 目标用户名（不含 `@`） |
+| `-o, --output` | `output` | 图片保存目录 |
+| `-n, --count` | `200` | API 模式最大推文数 |
+| `-w, --workers` | `4` | 并发下载线程数 |
+| `--bearer-token` | — | Twitter Bearer Token |
 | `--nitter` | 自动选择 | Nitter 实例 URL |
 | `--pages` | `5` | Nitter 翻页数 |
+| `--search-query` | — | 官方 API 最近搜索查询，提供后进入搜索模式 |
+| `--search-name` | 查询词生成 | 搜索模式输出目录名 |
+| `--top` | `10` | 搜索模式按点赞数选取的媒体数量 |
+| `--download-order` | `time` | 搜索模式下载排序：`time` 或 `likes` |
+| `--since` / `--until` | — | API 时间过滤，ISO 8601 格式 |
 
-### playwright_scraper.py 参数
+### `xscrape-browser`（Playwright 模式）
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| `username` | 必填 | 目标用户名 |
-| `-s / --scrolls` | `20` | 自动滚动次数（越多图越多）|
-| `-w / --workers` | `4` | 下载并发数 |
-| `--show-browser` | 隐藏 | 显示浏览器窗口 |
+| `username` | 必填 | 目标用户名（不含 `@`） |
+| `-o, --output` | `output` | 图片保存目录 |
+| `-s, --scrolls` | `20` | 自动滚动次数 |
+| `-w, --workers` | `4` | 下载并发数 |
+| `--show-browser` | 关闭 | 显示浏览器窗口 |
 
----
+### `xscrape-login`（保存 X 登录态）
 
-## 📂 输出说明
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--cookies` | `x_cookies.json` | Cookies 保存路径 |
+| `--timeout` | `180` | 等待手动登录的秒数 |
+| `--proxy` | — | 代理服务器地址 |
+| `--channel` | `msedge` | 浏览器通道：`msedge`、`chrome` 或 `chromium` |
+| `--profile-dir` | `.xscrape-browser-profile` | 持久化浏览器配置目录 |
+
+### `xscrape-x-search`（已登录 X 搜索）
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--query` | 必填 | X 搜索查询 |
+| `--cookies` | `x_cookies.json` | 登录 cookies 文件 |
+| `--name` | `x_search` | 输出子目录名 |
+| `--top` | `10` | 按点赞数选取的媒体数量 |
+| `--download-order` | `time` | 下载排序：`time` 或 `likes` |
+| `--tab` | `live` | X 搜索 tab：`live` 或 `top` |
+| `--show-browser` | 关闭 | 显示浏览器窗口，默认后台运行 |
+| `--quality-mode` | 关闭 | 使用综合质量分排序：点赞、转发、引用、图片尺寸和排除词 |
+
+## 输出结构
 
 ```
 output/
-└── elonmusk/
-    ├── metadata.json        # 图片元数据（URL、推文ID、时间）
-    ├── tweet123_photo.jpg
-    ├── tweet456_photo.jpg
+└── <username>/
+    ├── metadata.json       # 图片 URL、推文 ID、时间等元数据
+    ├── 1234567890_xxx.jpg
     └── ...
 ```
 
-- **自动去重**：相同内容只下载一次（MD5 校验）
-- **断点续传**：已下载的文件自动跳过
-- **元数据保存**：所有图片的来源推文信息保存至 `metadata.json`
+- 内容去重：相同 MD5 只存一份
+- 断点续传：已存在文件自动跳过
+- 元数据保存：每次运行写入 `metadata.json`
+- 运行日志：`logs/scraper.log`
 
----
+## 常用 Nitter 实例
 
-## ⚡ 使用示例
+- `https://nitter.privacydev.net`
+- `https://nitter.poast.org`
+- `https://nitter.1d4.us`
 
-```bash
-# 下载 NASA 的所有媒体图片（Nitter 免API模式）
-python src/scraper.py NASA --nitter https://nitter.privacydev.net --pages 20
+## 作为模块使用
 
-# 下载某用户图片（官方API，最多1000张，8线程）
-python src/scraper.py username --bearer-token xxxx --count 1000 --workers 8
+```python
+from xscrape.clients import NoAPIClient
+from xscrape.downloader import ImageDownloader
 
-# 浏览器模式，滚动50次，获取大量图片
-python src/playwright_scraper.py username --scrolls 50 --workers 6
+client = NoAPIClient("https://nitter.privacydev.net")
+images = client.get_images_from_profile("username", pages=5)
+
+dl = ImageDownloader("output/username", workers=4)
+stats = dl.download_all(images)
+print(stats)  # {"downloaded": 10, "skipped": 3, "failed": 0}
 ```
 
----
+## 项目结构
 
-## ⚠️ 注意事项
+```
+src/xscrape/
+├── __init__.py          # 包信息
+├── __main__.py          # python -m xscrape 入口
+├── cli.py               # API/Nitter 模式编排
+├── playwright_cli.py    # Playwright 模式编排
+├── clients.py           # TwitterAPIClient + NoAPIClient
+├── browser.py           # Playwright 抓取逻辑
+├── downloader.py        # 下载引擎（去重、并发、断点）
+├── logging_utils.py     # 日志配置
+└── utils.py             # 工具函数
+```
 
-1. **仅下载公开账号**的公开内容，请遵守 X 服务条款
-2. 添加适当的请求延迟（已内置），避免对服务器造成压力
-3. 官方 API 免费版有速率限制（15分钟/15次）
-4. 本工具仅供学习研究使用
+## 注意事项
 
----
-
-## 🔧 常见问题
-
-**Q: Nitter 返回空页面？**
-A: 更换 Nitter 实例，或改用 Playwright 模式
-
-**Q: API 返回 403？**
-A: Bearer Token 权限不足，检查 Developer Portal 中的 App 权限设置
-
-**Q: Playwright 模式图片为空？**
-A: 尝试 `--show-browser` 查看页面状态，可能需要手动登录
+- 仅下载公开账号的公开内容
+- Nitter 实例可能不稳定，失败时切换实例
+- API 模式受 Twitter 开发者权限和速率限制
+- Playwright 模式可能触发 X 登录墙

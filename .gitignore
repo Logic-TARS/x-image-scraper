@@ -1,5 +1,24 @@
 __pycache__/
 *.py[cod]
+.venv/
+.conda/
+*.egg-info/
+build/
+dist/
 
 logs/
 output/
+
+# Security — browser profiles, cookies, and credentials
+x_cookies.json
+.xscrape-browser-profile/
+*.local.json
+config.json
+
+# Streamlit
+.streamlit/
+streamlit*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db
